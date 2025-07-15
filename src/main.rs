@@ -48,8 +48,7 @@ fn main() {
                 _ => (),
             }
         }
-        // now the events are clear
-        // here's where we could change the world state and draw.
+
 
         unsafe {
             gl::load_with(|s| {
@@ -65,6 +64,7 @@ fn main() {
             assert_ne!(vao, 0);
             let mut vbo = 0;
             gl::GenBuffers(1, &mut vbo);
+			gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
             assert_ne!(vbo, 0);
             gl::BufferData(
                 gl::ARRAY_BUFFER,
@@ -106,13 +106,16 @@ fn main() {
                 v.set_len(log_len.try_into().unwrap());
                 panic!("Vertex Compile Error: {}", String::from_utf8_lossy(&v));
             }
+
             let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
-            assert_ne!(fragment_shader, 0);
+            assert_ne!(fragment_shader, 0);			
             const FRAG_SHADER: &str = r#"#version 330 core
   out vec4 final_color;
-
   void main() {
-    final_color = vec4(1.0, 0., 0., 1.0);
+  float x = gl_FragCoord.x / 800.0;
+  float y = gl_FragCoord.y / 600.0;
+  float z = gl_FragCoord.z;
+	final_color = vec4(x, y, z, 1.0);
   }
 "#;
             gl::ShaderSource(
@@ -146,10 +149,12 @@ fn main() {
             }
             gl::DeleteShader(vertex_shader);
             gl::DeleteShader(fragment_shader);
-            win.set_swap_interval(GlSwapInterval::Vsync);
+            let _ = win.set_swap_interval(GlSwapInterval::Vsync);
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
-        }
+            gl::DrawArrays(gl::TRIANGLES, 1, 3);
+			gl::UseProgram(shader_program);
+		}
 	win.swap_window();
     }
 }
