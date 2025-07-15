@@ -5,7 +5,7 @@ pub fn clear(mask: u32) {
   unsafe { gl::Clear(mask) }
 }
 
-// Basic wrapper for a [Vertex Array
+//h Basic wrapper for a [Vertex Array
 // Object](https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_Array_Object).
 // pub struct VertexArray(pub gl::uint);
 // impl VertexArray {
