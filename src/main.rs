@@ -4,22 +4,28 @@ use beryllium::{
     video::{CreateWinArgs, GlContextFlags, GlProfile, GlSwapInterval},
     *,
 };
+use cgmath::num_traits::ToPrimitive;
 mod config;
 mod helper;
+use chrono::*;
 use core::{
     convert::{TryFrom, TryInto},
+    f32,
     mem::{size_of, size_of_val},
+    time,
 };
-use gl::*;
-use std::ptr::null;
+use gl::{types::GLuint, *};
 
 type Vertex = [f32; 3];
 const VERTICES: [Vertex; 3] = [[-0.5, -0.5, 0.0], [0.5, -0.5, 0.0], [0.0, 0.5, 0.0]];
+const COLORS: [Vertex; 3] = [[0.5, 0.5, 0.0], [0.0, 0.5, 0.5], [0.0, 0.5, 0.0]];
 
 fn main() {
+    let start = chrono::DateTime::timestamp_millis(&self::Utc::now());
+
     let sdl = Sdl::init(init::InitFlags::EVERYTHING);
-    sdl.set_gl_context_major_version(3).unwrap();
-    sdl.set_gl_context_major_version(3).unwrap();
+    sdl.set_gl_context_major_version(4).unwrap();
+    sdl.set_gl_context_minor_version(6).unwrap();
     sdl.set_gl_profile(video::GlProfile::Core).unwrap();
 
     let win_args = video::CreateWinArgs {
@@ -41,14 +47,12 @@ fn main() {
                 (events::Event::Quit, _) => break 'main_loop,
                 (events::Event::Key { keycode, .. }, _) => {
                     if keycode == events::SDLK_ESCAPE {
-						
                         break 'main_loop;
                     }
                 }
                 _ => (),
             }
         }
-
 
         unsafe {
             gl::load_with(|s| {
@@ -58,21 +62,17 @@ fn main() {
                         win.get_proc_address(cstr.as_ptr() as *const u8)
                     })
             });
-            gl::ClearColor(0., 0., 1., 1.0);
-            let mut vao = 0;
-            gl::GenVertexArrays(1, &mut vao);
-            assert_ne!(vao, 0);
-            let mut vbo = 0;
-            gl::GenBuffers(1, &mut vbo);
-			gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-            assert_ne!(vbo, 0);
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                size_of_val(&VERTICES) as isize,
-                VERTICES.as_ptr().cast(),
-                gl::STATIC_DRAW,
-            );
-
+        }
+        let vao = helper::VertexArray::new().expect("Failed to create Vertex Array Object");
+		vao.bind();
+		let vbo = helper::Buffer::new().expect("Couldn't make a VBO");
+			vbo.bind(helper::BufferType::Array);
+			helper::Buffer::buffer_data(
+			helper::BufferType::Array,
+			bytemuck::cast_slice(&VERTICES),
+			gl::STATIC_DRAW,
+			);
+        unsafe {
             gl::VertexAttribPointer(
                 0,
                 3,
@@ -108,7 +108,7 @@ fn main() {
             }
 
             let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
-            assert_ne!(fragment_shader, 0);			
+            assert_ne!(fragment_shader, 0);
             const FRAG_SHADER: &str = r#"#version 330 core
   out vec4 final_color;
   void main() {
@@ -150,11 +150,17 @@ fn main() {
             gl::DeleteShader(vertex_shader);
             gl::DeleteShader(fragment_shader);
             let _ = win.set_swap_interval(GlSwapInterval::Vsync);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            helper::clear(gl::COLOR_BUFFER_BIT);
+            gl::UseProgram(shader_program);
+        }
+        let d_time = chrono::DateTime::timestamp_millis(&self::Utc::now()) - start;
+        let color_timed = d_time.to_f32().expect("Failed to convert time to f32") % 1000.0 / 900.0;
+        helper::clear_color(color_timed, color_timed + 0.33, color_timed + 0.66, 1.0);
+        helper::clear(gl::COLOR_BUFFER_BIT);
+        unsafe {
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
             gl::DrawArrays(gl::TRIANGLES, 1, 3);
-			gl::UseProgram(shader_program);
 		}
-	win.swap_window();
+        win.swap_window();
     }
 }

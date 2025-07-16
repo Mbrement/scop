@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 bytemuck = "1"
 gl = { version = "0.14.0"}
+chrono = "0.4.19"
 
 anyhow = "1"
 log = "0.4"
