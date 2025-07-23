@@ -18,8 +18,16 @@ use core::{
 use gl::{types::GLuint, *};
 
 type Vertex = [f32; 3];
-const VERTICES: [Vertex; 3] = [[-0.5, -0.5, 0.0], [0.5, -0.5, 0.0], [0.0, 0.5, 0.0]];
+type TriIndexes = [u32; 3];
+
+const VERTICES: [Vertex; 4] = [
+    [0.5, 0.5, 0.0],
+    [0.5, -0.5, 0.0],
+    [-0.5, -0.5, 0.0],
+    [-0.5, 0.5, 0.0],
+];
 const COLORS: [Vertex; 3] = [[0.5, 0.5, 0.0], [0.0, 0.5, 0.5], [0.0, 0.5, 0.0]];
+const INDICES: [TriIndexes; 2] = [[0, 1, 3], [1, 2, 3]];
 
 fn main() {
     let start = chrono::DateTime::timestamp_millis(&self::Utc::now());
@@ -73,6 +81,13 @@ fn main() {
             bytemuck::cast_slice(&VERTICES),
             gl::STATIC_DRAW,
         );
+        let ebo = helper::Buffer::new().expect("Couldn't make the element buffer.");
+        ebo.bind(helper::BufferType::ElementArray);
+        helper::Buffer::buffer_data(
+            helper::BufferType::ElementArray,
+            bytemuck::cast_slice(&INDICES),
+            gl::STATIC_DRAW,
+        );
         unsafe {
             gl::VertexAttribPointer(
                 0,
@@ -94,8 +109,8 @@ fn main() {
         helper::clear_color(color_timed, color_timed + 0.33, color_timed + 0.66, 1.0);
         helper::clear(gl::COLOR_BUFFER_BIT);
         unsafe {
-            gl::DrawArrays(gl::TRIANGLES, 0, 3);
-            gl::DrawArrays(gl::TRIANGLES, 1, 3);
+			// gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
         }
         win.swap_window();
     }
