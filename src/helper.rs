@@ -280,16 +280,15 @@ impl ShaderProgram {
     }
 }
 
-
 pub enum PolygonMode {
-  /// Just show the points.
-  Point = gl::POINT as isize,
-  /// Just show the lines.
-  Line = gl::LINE as isize,
-  /// Fill in the polygons.
-  Fill = gl::FILL as isize,
+    /// Just show the points.
+    Point = gl::POINT as isize,
+    /// Just show the lines.
+    Line = gl::LINE as isize,
+    /// Fill in the polygons.
+    Fill = gl::FILL as isize,
 }
 
 pub fn polygon_mode(mode: PolygonMode) {
-  unsafe { gl::PolygonMode(gl::FRONT_AND_BACK, mode as GLenum) };
+    unsafe { gl::PolygonMode(gl::FRONT_AND_BACK, mode as GLenum) };
 }
