@@ -35,22 +35,6 @@ const INDICES: [TriIndexes; 2] = [[0, 1, 3], [1, 2, 3]];
 fn main() {
     let start = chrono::DateTime::timestamp_millis(&self::Utc::now());
 
-    // let sdl = Sdl::init(init::InitFlags::EVERYTHING);
-    // sdl.set_gl_context_major_version(4).unwrap();
-    // sdl.set_gl_context_minor_version(6).unwrap();
-    // sdl.set_gl_profile(video::GlProfile::Core).unwrap();
-    //
-    // let win_args = video::CreateWinArgs {
-    // title: config::WindowConfig::NAME,
-    // width: config::WindowConfig::WIDTH,
-    // height: config::WindowConfig::HEIGHT,
-    // allow_high_dpi: true,
-    // borderless: false,
-    // resizable: false,
-    // };
-    // let win = sdl
-    // .create_gl_window(win_args)
-    // .expect("couldn't make a window and context");
     let mut window = winsdl::WindowSDL::new(
         config::WindowConfig::NAME,
         config::WindowConfig::WIDTH,
@@ -60,25 +44,28 @@ fn main() {
     vao.bind();
     let vbo = helper::Buffer::new().expect("Couldn't make a VBO");
     vbo.bind(helper::BufferType::Array);
-	        let shader_program =
-            helper::ShaderProgram::from_vert_frag(shader::VERT_SHADER, shader::FRAG_SHADER)
-                .unwrap();
-        shader_program.use_program();
+
+    let shader_program = helper::ShaderProgram::new().unwrap();
+    let p = "uni_color".as_ptr().cast();
+    // Get the location of the uniform variable in the shader program
+    let uni_color_loc = unsafe { gl::GetUniformLocation(shader_program.0, p) };
+    helper::ShaderProgram::from_vert_frag(shader::VERT_SHADER, shader::FRAG_SHADER).unwrap();
+    shader_program.use_program();
 
     'running: loop {
         for event in window.event_pump.poll_iter() {
             match event {
                 sdl2::event::Event::Quit { .. } => {
-                    // helper::ShaderProgram::delete(shader_program);
+                    helper::ShaderProgram::delete(shader_program);
                     break 'running;
                 }
                 sdl2::event::Event::KeyDown {
                     keycode: Some(sdl2::keyboard::Keycode::Escape),
                     ..
                 } => {
-					// helper::ShaderProgram::delete(shader_program);
-					break 'running
-				},
+                    helper::ShaderProgram::delete(shader_program);
+                    break 'running;
+                }
                 sdl2::event::Event::KeyDown {
                     keycode: Some(sdl2::keyboard::Keycode::W),
                     ..
@@ -113,6 +100,7 @@ fn main() {
             bytemuck::cast_slice(&INDICES),
             gl::STATIC_DRAW,
         );
+
         unsafe {
             gl::VertexAttribPointer(
                 0,
@@ -129,8 +117,10 @@ fn main() {
         let color_timed = d_time.to_f32().expect("Failed to convert time to f32") % 1000.0 / 900.0;
         helper::clear_color(color_timed, color_timed + 0.33, color_timed + 0.66, 1.0);
         helper::clear(gl::COLOR_BUFFER_BIT);
+        let green = (f32::sin(d_time.to_f32().unwrap()) / 2.0) + 0.5;
         unsafe {
             // gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            gl::Uniform4f(uni_color_loc, 0.1, green, 0.1, 1.0);
             gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
         }
         window.window.gl_swap_window();

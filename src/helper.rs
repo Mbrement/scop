@@ -203,6 +203,12 @@ impl ShaderProgram {
         }
     }
 
+    /// Gets the ID of this program object.
+
+    pub fn id(&self) -> GLuint {
+        self.0
+    }
+
     /// Attaches a shader object to this program object.
     pub fn attach_shader(&self, shader: &Shader) {
         unsafe { gl::AttachShader(self.0, shader.0) };
@@ -261,6 +267,29 @@ impl ShaderProgram {
     /// case. It's just less error prone than doing all the steps yourself.
     pub fn from_vert_frag(vert: &str, frag: &str) -> Result<Self, String> {
         let p = Self::new().ok_or_else(|| "Couldn't allocate a program".to_string())?;
+        let v = Shader::from_source(ShaderType::Vertex, vert)
+            .map_err(|e| format!("Vertex Compile Error: {}", e))?;
+        let f = Shader::from_source(ShaderType::Fragment, frag)
+            .map_err(|e| format!("Fragment Compile Error: {}", e))?;
+        p.attach_shader(&v);
+        p.attach_shader(&f);
+        p.link_program();
+        v.delete();
+        f.delete();
+        if p.link_success() {
+            Ok(p)
+        } else {
+            let out = format!("Program Link Error: {}", p.info_log());
+            p.delete();
+            Err(out)
+        }
+    }
+
+    pub fn from_vert_frag_uniform(vert: &str, frag: &str) -> Result<Self, String> {
+        let p = Self::new().ok_or_else(|| "Couldn't allocate a program".to_string())?;
+        let ptr = "uni_color".as_ptr().cast();
+        // Get the location of the uniform variable in the shader program
+        let uni_color_loc = unsafe { gl::GetUniformLocation(p.0, ptr) };
         let v = Shader::from_source(ShaderType::Vertex, vert)
             .map_err(|e| format!("Vertex Compile Error: {}", e))?;
         let f = Shader::from_source(ShaderType::Fragment, frag)
