@@ -21,4 +21,4 @@ tobj = { version = "4", features = ["log"] }
 
 imagine = "0.5.3"
 
-winit = "0.30.11"
+winit = "0.30.12"
