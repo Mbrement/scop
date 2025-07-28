@@ -1,10 +1,11 @@
 mod winsdl;
 use sdl2::{event, video, EventPump, Sdl};
 
-use cgmath::num_traits::ToPrimitive;
+// use cgmath::num_traits::ToPrimitive;
 mod config;
 mod helper;
 mod shader;
+
 use chrono::*;
 use core::{
     convert::{TryFrom, TryInto},
@@ -12,23 +13,43 @@ use core::{
     mem::{size_of, size_of_val},
     time,
 };
-use gl::{types::GLuint, *};
+use gl::{self, types::GLint};
+use imagine::{png, Bitmap};
 
-use crate::helper::ShaderType;
-
-type Vertex = [f32; 3];
+type Vertex = [f32; 3 + 2]; // pos (3) + color (3) + tex (2)
 type TriIndexes = [u32; 3];
+use cgmath::{Matrix4 as Mat4, Rad, Vector3, Matrix};
 
+//  it is a simple vertex structure with position and color
 const VERTICES: [Vertex; 4] = [
-    [0.5, 0.5, 0.0],
-    [0.5, -0.5, 0.0],
-    [-0.5, -0.5, 0.0],
-    [-0.5, 0.5, 0.0],
+    // top right
+    [0.5, 0.5, 0.0, 1.0, 1.0],
+    // bottom right
+    [0.5, -0.5, 0.0, 1.0, 0.0],
+    // bottom left
+    [-0.5, -0.5, 0.0, 0.0, 0.0],
+    // top left
+    [-0.5, 0.5, 0.0, 0.0, 1.0],
 ];
-const COLORS: [Vertex; 3] = [[0.5, 0.5, 0.0], [0.0, 0.5, 0.5], [0.0, 0.5, 0.0]];
+
 const INDICES: [TriIndexes; 2] = [[0, 1, 3], [1, 2, 3]];
 
 fn main() {
+    let logo = {
+        let mut f = std::fs::File::open("./src/logo.png").unwrap();
+        let mut bytes = vec![];
+        std::io::Read::read_to_end(&mut f, &mut bytes).unwrap();
+        let bitmap: Bitmap = imagine::png::png_try_bitmap_rgba(&bytes, false).unwrap();
+        bitmap
+    };
+
+    let garry = {
+        let mut f = std::fs::File::open("./src/garry.png").unwrap();
+        let mut bytes = vec![];
+        std::io::Read::read_to_end(&mut f, &mut bytes).unwrap();
+        let bitmap: Bitmap = imagine::png::png_try_bitmap_rgba(&bytes, false).unwrap();
+        bitmap
+    };
     let start = chrono::DateTime::timestamp_millis(&self::Utc::now());
     let mut running_engine = 0; // flag to control shader program usage
     let mut window = winsdl::WindowSDL::new(
@@ -47,6 +68,51 @@ fn main() {
     )
     .unwrap();
 
+    let mut logo_texture = 0;
+    unsafe {
+        gl::GenTextures(1, &mut logo_texture);
+        gl::ActiveTexture(gl::TEXTURE0);
+        gl::BindTexture(gl::TEXTURE_2D, logo_texture);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGBA as GLint,
+            logo.width as i32,
+            logo.height as i32,
+            0,
+            gl::RGBA,
+            gl::UNSIGNED_BYTE,
+            logo.pixels.as_ptr() as *const _,
+        );
+        gl::GenerateMipmap(gl::TEXTURE_2D);
+    }
+
+    let mut garry_texture = 0;
+    unsafe {
+        gl::GenTextures(1, &mut garry_texture);
+        gl::ActiveTexture(gl::TEXTURE1);
+        gl::BindTexture(gl::TEXTURE_2D, garry_texture);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGBA as GLint,
+            garry.width as i32,
+            garry.height as i32,
+            0,
+            gl::RGBA,
+            gl::UNSIGNED_BYTE,
+            garry.pixels.as_ptr() as *const _,
+        );
+        gl::GenerateMipmap(gl::TEXTURE_2D);
+    }
     let shader_program =
         helper::ShaderProgram::from_vert_frag(shader::VERT_SHADER, shader::FRAG_SHADER).unwrap();
     shader_program.use_program();
@@ -86,12 +152,11 @@ fn main() {
                     keycode: Some(sdl2::keyboard::Keycode::LCTRL),
                     ..
                 } => {
-                    if running_engine & 1 == 0 {
+                    if running_engine & 1 != 0 {
                         shader_program.use_program();
                         running_engine -= 1;
                         break;
                     }
-                    shader_program_uniform.use_program();
                     uni_color_loc = unsafe {
                         gl::GetUniformLocation(
                             shader_program_uniform.0,
@@ -101,18 +166,19 @@ fn main() {
                     if uni_color_loc < 0 {
                         panic!("\x1b[93mFailed to get uniform location for 'uni_color'\x1b[0m");
                     }
+                    shader_program_uniform.use_program();
                     running_engine += 1;
                 }
                 sdl2::event::Event::KeyDown {
                     keycode: Some(sdl2::keyboard::Keycode::LALT),
                     ..
                 } => {
-					if running_engine & 2 == 0 {
-						running_engine -= 2;
-					} else {
-						running_engine += 2;
-					}
-				}
+                    if running_engine & 2 == 0 {
+                        running_engine -= 2;
+                    } else {
+                        running_engine += 2;
+                    }
+                }
                 _ => {}
             }
         }
@@ -129,7 +195,6 @@ fn main() {
             bytemuck::cast_slice(&INDICES),
             gl::STATIC_DRAW,
         );
-
         unsafe {
             gl::VertexAttribPointer(
                 0,
@@ -140,6 +205,29 @@ fn main() {
                 0 as *const _,
             );
             gl::EnableVertexAttribArray(0);
+            gl::VertexAttribPointer(
+                1,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                size_of::<Vertex>().try_into().unwrap(),
+                size_of::<[f32; 3]>() as *const _,
+            );
+            gl::EnableVertexAttribArray(1);
+            gl::VertexAttribPointer(
+                2,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                size_of::<Vertex>().try_into().unwrap(),
+                size_of::<[f32; 6]>() as *const _,
+            );
+            gl::EnableVertexAttribArray(2);
+
+            let logo_name = "logo_texture".as_ptr().cast();
+            gl::Uniform1i(gl::GetUniformLocation(shader_program.0, logo_name), 0);
+            let garris_name = "garris_texture".as_ptr().cast();
+            gl::Uniform1i(gl::GetUniformLocation(shader_program.0, garris_name), 1);
         }
 
         // Get the location of the uniform variable in the shader program
@@ -149,14 +237,22 @@ fn main() {
         // let color_timed = d_time.to_f32().expect("Failed to convert time to f32") % 1000.0 / 900.0;
         helper::clear_color(green, green + 0.33, green + 0.66, 1.0);
         helper::clear(gl::COLOR_BUFFER_BIT);
-        let green = (f32::sin(window.sdl.timer().unwrap().ticks() as f32 / 1000.0_f32) / 2.0) + 0.5;
+        let transform = Mat4::from_angle_z(Rad(window.sdl.timer().unwrap().ticks() as f32 / 1000.0_f32))
+			* Mat4::from_translation(Vector3::new(0.0, 0.0, 0.0))
+			* Mat4::from_nonuniform_scale(1.0, 1.0, 1.0);
         unsafe {
             // gl::DrawArrays(gl::TRIANGLES, 0, 3);
             // gl::UseProgram(shader_program.0);
             if uni_color_loc != -1 {
                 gl::Uniform4f(uni_color_loc, 0.1, green, 0.1, 1.0);
+                let transform_name = "transform".as_ptr().cast();
+                let transform_loc = gl::GetUniformLocation(shader_program.0, transform_name);
+                gl::UniformMatrix4fv(transform_loc, 1, gl::FALSE, transform.as_ptr());
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
             } else {
+                let transform_name = "transform".as_ptr().cast();
+                let transform_loc = gl::GetUniformLocation(shader_program.0, transform_name);
+                gl::UniformMatrix4fv(transform_loc, 1, gl::FALSE, transform.as_ptr());
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
             }
         }
