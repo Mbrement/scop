@@ -1,7 +1,6 @@
 mod winsdl;
 use sdl2::{event, video, EventPump, Sdl};
 
-// use cgmath::num_traits::ToPrimitive;
 mod config;
 mod helper;
 mod shader;
@@ -18,7 +17,7 @@ use imagine::{png, Bitmap};
 
 type Vertex = [f32; 3 + 2]; // pos (3) + color (3) + tex (2)
 type TriIndexes = [u32; 3];
-use cgmath::{Matrix4 as Mat4, Rad, Vector3, Matrix};
+use glam::Mat4;
 
 //  it is a simple vertex structure with position and color
 const VERTICES: [Vertex; 4] = [
@@ -237,9 +236,9 @@ fn main() {
         // let color_timed = d_time.to_f32().expect("Failed to convert time to f32") % 1000.0 / 900.0;
         helper::clear_color(green, green + 0.33, green + 0.66, 1.0);
         helper::clear(gl::COLOR_BUFFER_BIT);
-        let transform = Mat4::from_angle_z(Rad(window.sdl.timer().unwrap().ticks() as f32 / 1000.0_f32))
-			* Mat4::from_translation(Vector3::new(0.0, 0.0, 0.0))
-			* Mat4::from_nonuniform_scale(1.0, 1.0, 1.0);
+        let mut transform =
+            Mat4::from_rotation_z(window.sdl.timer().unwrap().ticks() as f32 / 1000.0);
+        // transform = Mat4::from_rotation_z(window.sdl.timer().unwrap().ticks() as f32 / 1000.0);
         unsafe {
             // gl::DrawArrays(gl::TRIANGLES, 0, 3);
             // gl::UseProgram(shader_program.0);
@@ -247,12 +246,22 @@ fn main() {
                 gl::Uniform4f(uni_color_loc, 0.1, green, 0.1, 1.0);
                 let transform_name = "transform".as_ptr().cast();
                 let transform_loc = gl::GetUniformLocation(shader_program.0, transform_name);
-                gl::UniformMatrix4fv(transform_loc, 1, gl::FALSE, transform.as_ptr());
+                gl::UniformMatrix4fv(
+                    transform_loc,
+                    1,
+                    gl::FALSE,
+                    transform.to_cols_array().as_ptr(),
+                );
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
             } else {
                 let transform_name = "transform".as_ptr().cast();
-                let transform_loc = gl::GetUniformLocation(shader_program.0, transform_name);
-                gl::UniformMatrix4fv(transform_loc, 1, gl::FALSE, transform.as_ptr());
+                let transform_loc: i32 = gl::GetUniformLocation(shader_program.0, transform_name);
+                gl::UniformMatrix4fv(
+                    transform_loc,
+                    1,
+                    gl::FALSE,
+                    transform.to_cols_array().as_ptr(),
+                );
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
             }
         }
