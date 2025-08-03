@@ -61,12 +61,14 @@ pub const FRAG_SHADER: &str = r#"#version 460 core
   uniform sampler2D logo_texture;
   uniform sampler2D garris_texture;
 
-  in vec4 frag_color;
   in vec2 frag_tex;
 
   out vec4 final_color;
 
   void main() {
-    final_color = mix(texture(logo_texture, frag_tex), texture(garris_texture, frag_tex), 0.4);
+    final_color = mix(
+	texture(logo_texture, frag_tex), 
+	texture(garris_texture, frag_tex), 
+	0.4);
 		  }
 "#;

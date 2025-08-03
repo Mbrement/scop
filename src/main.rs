@@ -15,11 +15,11 @@ use core::{
 use gl::{self, types::GLint};
 use imagine::{png, Bitmap};
 
-type Vertex = [f32; 3 + 2]; // pos (3) + color (3) + tex (2)
+type Vertex = [f32; 3 + 2]; // pos (3)+ tex (2)
 type TriIndexes = [u32; 3];
 use glam::Mat4;
 
-//  it is a simple vertex structure with position and color
+//  it is a simple vertex structure with position and texture coordinates
 const VERTICES: [Vertex; 4] = [
     // top right
     [0.5, 0.5, 0.0, 1.0, 1.0],
@@ -49,6 +49,7 @@ fn main() {
         let bitmap: Bitmap = imagine::png::png_try_bitmap_rgba(&bytes, false).unwrap();
         bitmap
     };
+
     let start = chrono::DateTime::timestamp_millis(&self::Utc::now());
     let mut running_engine = 0; // flag to control shader program usage
     let mut window = winsdl::WindowSDL::new(
@@ -60,6 +61,13 @@ fn main() {
     vao.bind();
     let vbo = helper::Buffer::new().expect("Couldn't make a VBO");
     vbo.bind(helper::BufferType::Array);
+    let ebo = helper::Buffer::new().expect("Couldn't make the element buffer.");
+    ebo.bind(helper::BufferType::ElementArray);
+    helper::Buffer::buffer_data(
+        helper::BufferType::ElementArray,
+        bytemuck::cast_slice(&INDICES),
+        gl::STATIC_DRAW,
+    );
 
     let shader_program_uniform = helper::ShaderProgram::from_vert_frag(
         shader::VERT_SHADER_UNIFORM,
@@ -187,13 +195,6 @@ fn main() {
             bytemuck::cast_slice(&VERTICES),
             gl::STATIC_DRAW,
         );
-        let ebo = helper::Buffer::new().expect("Couldn't make the element buffer.");
-        ebo.bind(helper::BufferType::ElementArray);
-        helper::Buffer::buffer_data(
-            helper::BufferType::ElementArray,
-            bytemuck::cast_slice(&INDICES),
-            gl::STATIC_DRAW,
-        );
         unsafe {
             gl::VertexAttribPointer(
                 0,
@@ -206,22 +207,13 @@ fn main() {
             gl::EnableVertexAttribArray(0);
             gl::VertexAttribPointer(
                 1,
-                3,
+                2,
                 gl::FLOAT,
                 gl::FALSE,
                 size_of::<Vertex>().try_into().unwrap(),
                 size_of::<[f32; 3]>() as *const _,
             );
             gl::EnableVertexAttribArray(1);
-            gl::VertexAttribPointer(
-                2,
-                2,
-                gl::FLOAT,
-                gl::FALSE,
-                size_of::<Vertex>().try_into().unwrap(),
-                size_of::<[f32; 6]>() as *const _,
-            );
-            gl::EnableVertexAttribArray(2);
 
             let logo_name = "logo_texture".as_ptr().cast();
             gl::Uniform1i(gl::GetUniformLocation(shader_program.0, logo_name), 0);
@@ -231,31 +223,30 @@ fn main() {
 
         // Get the location of the uniform variable in the shader program
 
-        // let d_time = chrono::DateTime::timestamp_millis(&self::Utc::now()) - start;
         let green = f32::sin(window.sdl.timer().unwrap().ticks() as f32 / 1000.0_f32);
-        // let color_timed = d_time.to_f32().expect("Failed to convert time to f32") % 1000.0 / 900.0;
-        helper::clear_color(green, green + 0.33, green + 0.66, 1.0);
+        helper::clear_color(0., 0., 0., 1.0);
         helper::clear(gl::COLOR_BUFFER_BIT);
-        let mut transform =
-            Mat4::from_rotation_z(window.sdl.timer().unwrap().ticks() as f32 / 1000.0);
-        // transform = Mat4::from_rotation_z(window.sdl.timer().unwrap().ticks() as f32 / 1000.0);
+        let transform = 
+			Mat4::from_rotation_z(window.sdl.timer().unwrap().ticks() as f32 / 1000.0);
+        // Mat4::from_scale_rotation_translation(
+        // 	glam::Vec3::new(0.5, 0.5, 1.0),
+        // 	glam::Quat::from_rotation_z(window.sdl.timer().unwrap().ticks() as f32 / 1000.0),
+        // 	glam::Vec3::new(0.0, 0.0, 0.0),
+        // );
         unsafe {
             // gl::DrawArrays(gl::TRIANGLES, 0, 3);
             // gl::UseProgram(shader_program.0);
             if uni_color_loc != -1 {
                 gl::Uniform4f(uni_color_loc, 0.1, green, 0.1, 1.0);
-                let transform_name = "transform".as_ptr().cast();
-                let transform_loc = gl::GetUniformLocation(shader_program.0, transform_name);
-                gl::UniformMatrix4fv(
-                    transform_loc,
-                    1,
-                    gl::FALSE,
-                    transform.to_cols_array().as_ptr(),
-                );
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
             } else {
-                let transform_name = "transform".as_ptr().cast();
+				shader_program.use_program();
+                let transform_name = "transform\0".as_ptr().cast();
                 let transform_loc: i32 = gl::GetUniformLocation(shader_program.0, transform_name);
+				if transform_loc < 0 {
+					// println!("\x1b[93mFailed to get uniform location for 'transform'\x1b[0m");
+					// --> actually happen, but why
+				}
                 gl::UniformMatrix4fv(
                     transform_loc,
                     1,
