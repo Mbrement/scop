@@ -40,11 +40,11 @@ impl Mat4 {
         let c = angle.cos();
         let s = angle.sin();
         Self([
-			[c, s, 0.0, 0.0],
-			[-s, c, 0.0, 0.0],
-			Vec4::Z.to_array(),
-			Vec4::W.to_array(),
-		])
+            [c, s, 0.0, 0.0],
+            [-s, c, 0.0, 0.0],
+            Vec4::Z.to_array(),
+            Vec4::W.to_array(),
+        ])
     }
 
     pub fn rotate_x(&mut self, angle: f32) {

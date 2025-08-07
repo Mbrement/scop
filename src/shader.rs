@@ -18,6 +18,23 @@ pub const VERT_SHADER_UNIFORM: &str = r#"#version 460 core
 // "#;
 
 // texture variante
+
+// pub const VERT_SHADER: &str = r#"#version 460 core
+//   uniform mat4 model;
+//   uniform mat4 view;
+//   uniform mat4 projection;
+
+//   layout (location = 0) in vec3 pos;
+//   layout (location = 1) in vec2 tex;
+
+//   out vec2 frag_tex;
+
+//   void main() {
+//     gl_Position = projection * view * model * vec4(pos, 1.0);
+//     frag_tex = tex;
+//   }
+// "#;
+
 pub const VERT_SHADER: &str = r#"#version 460 core
   uniform mat4 transform;
   
@@ -56,12 +73,31 @@ pub const FRAG_SHADER_UNIFORM: &str = r#"#version 460 core
   }
 "#;
 
+// texture variante and position
+// pub const FRAG_SHADER: &str = r#"#version 460 core
+//   uniform sampler2D logo_texture;
+//   uniform sampler2D garris_texture;
+//   uniform float time;
+
+//   in vec2 frag_tex;
+
+//   out vec4 final_color;
+
+//   void main() {
+//     final_color = mix(
+// 	texture(logo_texture, frag_tex),
+// 	texture(garris_texture, frag_tex),
+// 	time);
+// 		  }
+// "#;
+
 // tex variante
 pub const FRAG_SHADER: &str = r#"#version 460 core
   uniform sampler2D logo_texture;
   uniform sampler2D garris_texture;
   uniform float time;
 
+  in vec4 frag_color;
   in vec2 frag_tex;
 
   out vec4 final_color;

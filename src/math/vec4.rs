@@ -43,6 +43,16 @@ impl Vec4 {
     /// The unit axes.
     pub const AXES: [Self; 4] = [Self::X, Self::Y, Self::Z, Self::W];
 
+	pub fn from_translation(vec3: Vec3) -> Self {
+		Self {
+			x: vec3.x,
+			y: vec3.y,
+			z: vec3.z,
+			w: 1.0,
+		}
+	}
+
+#[inline]
     pub fn from_array(arr: &[f32; 4]) -> Self {
         Self {
             x: arr[0],
@@ -51,10 +61,12 @@ impl Vec4 {
             w: arr[3],
         }
     }
-	pub fn to_array(&self) -> [f32; 4] {
-		[self.x, self.y, self.z, self.w]
-	}
+    #[inline]
+    pub const fn to_array(&self) -> [f32; 4] {
+        [self.x, self.y, self.z, self.w]
+    }
 
+    #[inline]
     pub fn zero() -> Self {
         Self {
             x: 0.0,
@@ -64,6 +76,7 @@ impl Vec4 {
         }
     }
 
+    #[inline]
     pub fn dot(self, other: Self) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z + self.w * other.w
     }

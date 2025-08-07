@@ -35,13 +35,14 @@ const VERTICES: [Vertex; 4] = [
 const INDICES: [TriIndexes; 2] = [[0, 1, 3], [1, 2, 3]];
 
 fn main() {
+    // let mut ticks_nb = 0.0;
     let logo = {
         let mut f = std::fs::File::open("./src/logo.png").unwrap();
         let mut bytes = vec![];
         std::io::Read::read_to_end(&mut f, &mut bytes).unwrap();
         let bitmap: Bitmap = imagine::png::png_try_bitmap_rgba(&bytes, false).unwrap();
         bitmap
-    };
+    }; //TODO : load the texture without external lib HALP
 
     let garry = {
         let mut f = std::fs::File::open("./src/garry.png").unwrap();
@@ -49,7 +50,7 @@ fn main() {
         std::io::Read::read_to_end(&mut f, &mut bytes).unwrap();
         let bitmap: Bitmap = imagine::png::png_try_bitmap_rgba(&bytes, false).unwrap();
         bitmap
-    };
+    }; //TODO : load the texture without external lib HALP
 
     let start = chrono::DateTime::timestamp_millis(&self::Utc::now());
     let mut running_engine = 0; // flag to control shader program usage
@@ -121,11 +122,69 @@ fn main() {
         );
         gl::GenerateMipmap(gl::TEXTURE_2D);
     }
+
     let shader_program =
         helper::ShaderProgram::from_vert_frag(shader::VERT_SHADER, shader::FRAG_SHADER).unwrap();
     shader_program.use_program();
     let mut uni_color_loc = -1;
 
+    helper::Buffer::buffer_data(
+        helper::BufferType::Array,
+        bytemuck::cast_slice(&VERTICES),
+        gl::STATIC_DRAW,
+    );
+    unsafe {
+        gl::VertexAttribPointer(
+            0,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            size_of::<Vertex>().try_into().unwrap(),
+            0 as *const _,
+        );
+        gl::EnableVertexAttribArray(0);
+        gl::VertexAttribPointer(
+            1,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            size_of::<Vertex>().try_into().unwrap(),
+            size_of::<[f32; 3]>() as *const _,
+        );
+        gl::EnableVertexAttribArray(1);
+
+        let logo_name = "logo_texture\0".as_ptr().cast();
+        gl::Uniform1i(gl::GetUniformLocation(shader_program.0, logo_name), 0);
+        let garris_name = "garris_texture\0".as_ptr().cast();
+        gl::Uniform1i(gl::GetUniformLocation(shader_program.0, garris_name), 1);
+        let time_name = "time\0".as_ptr().cast();
+        gl::Uniform1f(gl::GetUniformLocation(shader_program.0, time_name), 0.0);
+    }
+	let projection = ultraviolet::projection::perspective_gl(
+    45.0_f32.to_radians(),
+    (config::WindowConfig::WIDTH as f32) / (config::WindowConfig::HEIGHT as f32),
+    0.1,
+    100.0,
+  );
+
+	let model_loc = unsafe {
+	let name = "model\0".as_ptr().cast();
+		gl::GetUniformLocation(shader_program.0, name)
+	};
+	let view_loc = unsafe {
+		let name = "view\0".as_ptr().cast();
+		gl::GetUniformLocation(shader_program.0, name)
+	};
+	let projection_loc = unsafe {
+		let name = "projection\0".as_ptr().cast();
+		gl::GetUniformLocation(shader_program.0, name)
+	};
+	unsafe {
+    gl::UniformMatrix4fv(projection_loc, 1, gl::FALSE, projection.as_ptr())
+  };
+
+    let view = math::Mat4::from_);
+  unsafe { gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, view.as_ptr()) };
     'running: loop {
         for event in window.event_pump.poll_iter() {
             match event {
@@ -191,60 +250,28 @@ fn main() {
             }
         }
 
-        helper::Buffer::buffer_data(
-            helper::BufferType::Array,
-            bytemuck::cast_slice(&VERTICES),
-            gl::STATIC_DRAW,
-        );
-        unsafe {
-            gl::VertexAttribPointer(
-                0,
-                3,
-                gl::FLOAT,
-                gl::FALSE,
-                size_of::<Vertex>().try_into().unwrap(),
-                0 as *const _,
-            );
-            gl::EnableVertexAttribArray(0);
-            gl::VertexAttribPointer(
-                1,
-                2,
-                gl::FLOAT,
-                gl::FALSE,
-                size_of::<Vertex>().try_into().unwrap(),
-                size_of::<[f32; 3]>() as *const _,
-            );
-            gl::EnableVertexAttribArray(1);
-
-            let logo_name = "logo_texture\0".as_ptr().cast();
-            gl::Uniform1i(gl::GetUniformLocation(shader_program.0, logo_name), 0);
-            let garris_name = "garris_texture\0".as_ptr().cast();
-            gl::Uniform1i(gl::GetUniformLocation(shader_program.0, garris_name), 1);
-			let time_name = "time\0".as_ptr().cast();
-            gl::Uniform1f(gl::GetUniformLocation(shader_program.0, time_name), 0.0);
-        }
-
         // Get the location of the uniform variable in the shader program
 
-        let green = f32::sin(window.sdl.timer().unwrap().ticks() as f32 / 1000.0_f32);
-        helper::clear_color(0., 0., 0., 1.0);
+        let ticks_nb = window.sdl.timer().unwrap().ticks() as f32 / 1000.0;
+        let color_sin_value = f32::sin(ticks_nb / 1000.0);
+        helper::clear_color(0., 0.33 + color_sin_value, 0.66 + color_sin_value, 1.0);
         helper::clear(gl::COLOR_BUFFER_BIT);
-        let transform = math::Mat4::from_rotation_z(window.sdl.timer().unwrap().ticks() as f32 / 1000.0);
 
-		unsafe {
+        unsafe {
             // gl::DrawArrays(gl::TRIANGLES, 0, 3);
             // gl::UseProgram(shader_program.0);
             if uni_color_loc != -1 {
-                gl::Uniform4f(uni_color_loc, 0.1, green, 0.1, 1.0);
+                gl::Uniform4f(uni_color_loc, 0.1, color_sin_value, 0.1, 1.0);
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
             } else {
+                let transform = math::Mat4::from_rotation_z(ticks_nb);
                 shader_program.use_program();
                 let transform_name = "transform\0".as_ptr().cast();
                 let transform_loc: i32 = gl::GetUniformLocation(shader_program.0, transform_name);
-                if transform_loc < 0 {
-                    // println!("\x1b[93mFailed to get uniform location for 'transform'\x1b[0m");
-                    // --> actually happen, but why
-                }
+                // if transform_loc < 0 {
+                //     // println!("\x1b[93mFailed to get uniform location for 'transform'\x1b[0m");
+                //     // --> actually happen, but why
+                // }
                 gl::UniformMatrix4fv(
                     transform_loc,
                     1,
@@ -252,11 +279,17 @@ fn main() {
                     // transform.to_cols_array().as_ptr(),
                     transform.to_cols_array().as_ptr(),
                 );
-				let time_loc = gl::GetUniformLocation(shader_program.0, "time\0".as_ptr().cast());
-                gl::Uniform1f(time_loc, window.sdl.timer().unwrap().ticks() as f32 / 2000.0 % 1.0);
+                let time_loc = gl::GetUniformLocation(shader_program.0, "time\0".as_ptr().cast());
+                gl::Uniform1f(
+                    time_loc,
+                    window.sdl.timer().unwrap().ticks() as f32 / 2000.0 % 1.0,
+                );
+                // ticks_nb += 1.0;
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
             }
         }
+        // println!("Ticks true: {}", window.sdl.timer().unwrap().ticks());
+        // println!("Ticks: {}", ticks_nb);
         window.window.gl_swap_window();
     }
     shader_program.delete();
