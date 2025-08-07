@@ -23,3 +23,9 @@ glam = "0.30.5"
 imagine = "0.5.3"
 
 winit = "0.30.12"
+
+
+
+[lib]
+name = "math"
+path = "src/math/lib.rs"

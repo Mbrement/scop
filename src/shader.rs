@@ -60,6 +60,7 @@ pub const FRAG_SHADER_UNIFORM: &str = r#"#version 460 core
 pub const FRAG_SHADER: &str = r#"#version 460 core
   uniform sampler2D logo_texture;
   uniform sampler2D garris_texture;
+  uniform float time;
 
   in vec2 frag_tex;
 
@@ -69,6 +70,6 @@ pub const FRAG_SHADER: &str = r#"#version 460 core
     final_color = mix(
 	texture(logo_texture, frag_tex), 
 	texture(garris_texture, frag_tex), 
-	0.4);
+	time);
 		  }
 "#;

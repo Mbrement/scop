@@ -17,7 +17,8 @@ use imagine::{png, Bitmap};
 
 type Vertex = [f32; 3 + 2]; // pos (3)+ tex (2)
 type TriIndexes = [u32; 3];
-use glam::Mat4;
+
+use math;
 
 //  it is a simple vertex structure with position and texture coordinates
 const VERTICES: [Vertex; 4] = [
@@ -215,10 +216,12 @@ fn main() {
             );
             gl::EnableVertexAttribArray(1);
 
-            let logo_name = "logo_texture".as_ptr().cast();
+            let logo_name = "logo_texture\0".as_ptr().cast();
             gl::Uniform1i(gl::GetUniformLocation(shader_program.0, logo_name), 0);
-            let garris_name = "garris_texture".as_ptr().cast();
+            let garris_name = "garris_texture\0".as_ptr().cast();
             gl::Uniform1i(gl::GetUniformLocation(shader_program.0, garris_name), 1);
+			let time_name = "time\0".as_ptr().cast();
+            gl::Uniform1f(gl::GetUniformLocation(shader_program.0, time_name), 0.0);
         }
 
         // Get the location of the uniform variable in the shader program
@@ -226,33 +229,31 @@ fn main() {
         let green = f32::sin(window.sdl.timer().unwrap().ticks() as f32 / 1000.0_f32);
         helper::clear_color(0., 0., 0., 1.0);
         helper::clear(gl::COLOR_BUFFER_BIT);
-        let transform = 
-			Mat4::from_rotation_z(window.sdl.timer().unwrap().ticks() as f32 / 1000.0);
-        // Mat4::from_scale_rotation_translation(
-        // 	glam::Vec3::new(0.5, 0.5, 1.0),
-        // 	glam::Quat::from_rotation_z(window.sdl.timer().unwrap().ticks() as f32 / 1000.0),
-        // 	glam::Vec3::new(0.0, 0.0, 0.0),
-        // );
-        unsafe {
+        let transform = math::Mat4::from_rotation_z(window.sdl.timer().unwrap().ticks() as f32 / 1000.0);
+
+		unsafe {
             // gl::DrawArrays(gl::TRIANGLES, 0, 3);
             // gl::UseProgram(shader_program.0);
             if uni_color_loc != -1 {
                 gl::Uniform4f(uni_color_loc, 0.1, green, 0.1, 1.0);
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
             } else {
-				shader_program.use_program();
+                shader_program.use_program();
                 let transform_name = "transform\0".as_ptr().cast();
                 let transform_loc: i32 = gl::GetUniformLocation(shader_program.0, transform_name);
-				if transform_loc < 0 {
-					// println!("\x1b[93mFailed to get uniform location for 'transform'\x1b[0m");
-					// --> actually happen, but why
-				}
+                if transform_loc < 0 {
+                    // println!("\x1b[93mFailed to get uniform location for 'transform'\x1b[0m");
+                    // --> actually happen, but why
+                }
                 gl::UniformMatrix4fv(
                     transform_loc,
                     1,
                     gl::FALSE,
+                    // transform.to_cols_array().as_ptr(),
                     transform.to_cols_array().as_ptr(),
                 );
+				let time_loc = gl::GetUniformLocation(shader_program.0, "time\0".as_ptr().cast());
+                gl::Uniform1f(time_loc, window.sdl.timer().unwrap().ticks() as f32 / 2000.0 % 1.0);
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
             }
         }
