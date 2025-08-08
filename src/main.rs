@@ -20,6 +20,8 @@ type TriIndexes = [u32; 3];
 
 use math;
 
+// use glam::{Mat4, Vec3, Vec4};
+
 //  it is a simple vertex structure with position and texture coordinates
 const VERTICES: [Vertex; 4] = [
     // top right
@@ -37,7 +39,7 @@ const INDICES: [TriIndexes; 2] = [[0, 1, 3], [1, 2, 3]];
 fn main() {
     // let mut ticks_nb = 0.0;
     let logo = {
-        let mut f = std::fs::File::open("./src/logo.png").unwrap();
+        let mut f = std::fs::File::open("./src/cat1.png").unwrap();
         let mut bytes = vec![];
         std::io::Read::read_to_end(&mut f, &mut bytes).unwrap();
         let bitmap: Bitmap = imagine::png::png_try_bitmap_rgba(&bytes, false).unwrap();
@@ -45,7 +47,7 @@ fn main() {
     }; //TODO : load the texture without external lib HALP
 
     let garry = {
-        let mut f = std::fs::File::open("./src/garry.png").unwrap();
+        let mut f = std::fs::File::open("./src/cat2.png").unwrap();
         let mut bytes = vec![];
         std::io::Read::read_to_end(&mut f, &mut bytes).unwrap();
         let bitmap: Bitmap = imagine::png::png_try_bitmap_rgba(&bytes, false).unwrap();
@@ -160,31 +162,38 @@ fn main() {
         let time_name = "time\0".as_ptr().cast();
         gl::Uniform1f(gl::GetUniformLocation(shader_program.0, time_name), 0.0);
     }
-	let projection = ultraviolet::projection::perspective_gl(
-    45.0_f32.to_radians(),
-    (config::WindowConfig::WIDTH as f32) / (config::WindowConfig::HEIGHT as f32),
-    0.1,
-    100.0,
-  );
 
-	let model_loc = unsafe {
-	let name = "model\0".as_ptr().cast();
-		gl::GetUniformLocation(shader_program.0, name)
-	};
-	let view_loc = unsafe {
-		let name = "view\0".as_ptr().cast();
-		gl::GetUniformLocation(shader_program.0, name)
-	};
-	let projection_loc = unsafe {
-		let name = "projection\0".as_ptr().cast();
-		gl::GetUniformLocation(shader_program.0, name)
-	};
+    let model_loc = unsafe {
+        let name = "model\0".as_ptr().cast();
+        gl::GetUniformLocation(shader_program.0, name)
+    };
+    let view_loc = unsafe {
+        let name = "view\0".as_ptr().cast();
+        gl::GetUniformLocation(shader_program.0, name)
+    };
+    let projection_loc = unsafe {
+        let name = "projection\0".as_ptr().cast();
+        gl::GetUniformLocation(shader_program.0, name)
+    };
+	
+    let view = math::Mat4::from_translation(math::Vec3::from_array(&[0.0, 0.0, -1.0]));
+    unsafe { gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, view.to_cols_array().as_ptr()) };
+	
+    let projection = ultraviolet::projection::perspective_gl(
+		45.0_f32.to_radians(),
+        (config::WindowConfig::WIDTH as f32) / (config::WindowConfig::HEIGHT as f32),
+        0.1,
+        100.0,
+    );
+	unsafe { gl::UniformMatrix4fv(projection_loc, 1, gl::FALSE, projection.as_ptr()) };
+
 	unsafe {
-    gl::UniformMatrix4fv(projection_loc, 1, gl::FALSE, projection.as_ptr())
-  };
+		gl::UniformMatrix4fv(projection_loc, 1, gl::FALSE, projection.as_ptr());
+	}
 
-    let view = math::Mat4::from_);
-  unsafe { gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, view.as_ptr()) };
+
+
+
     'running: loop {
         for event in window.event_pump.poll_iter() {
             match event {
@@ -253,17 +262,18 @@ fn main() {
         // Get the location of the uniform variable in the shader program
 
         let ticks_nb = window.sdl.timer().unwrap().ticks() as f32 / 1000.0;
-        let color_sin_value = f32::sin(ticks_nb / 1000.0);
+        let color_sin_value = f32::sin(ticks_nb);
         helper::clear_color(0., 0.33 + color_sin_value, 0.66 + color_sin_value, 1.0);
         helper::clear(gl::COLOR_BUFFER_BIT);
 
         unsafe {
             // gl::DrawArrays(gl::TRIANGLES, 0, 3);
             // gl::UseProgram(shader_program.0);
-            if uni_color_loc != -1 {
+            if running_engine % 2 == 1 {
                 gl::Uniform4f(uni_color_loc, 0.1, color_sin_value, 0.1, 1.0);
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
-            } else {
+            } 
+			else {
                 let transform = math::Mat4::from_rotation_z(ticks_nb);
                 shader_program.use_program();
                 let transform_name = "transform\0".as_ptr().cast();
@@ -272,13 +282,21 @@ fn main() {
                 //     // println!("\x1b[93mFailed to get uniform location for 'transform'\x1b[0m");
                 //     // --> actually happen, but why
                 // }
-                gl::UniformMatrix4fv(
-                    transform_loc,
-                    1,
-                    gl::FALSE,
-                    // transform.to_cols_array().as_ptr(),
-                    transform.to_cols_array().as_ptr(),
-                );
+				let model =  math::Mat4::mul_mat4(math::Mat4::from_rotation_x(1.3), math::Mat4::from_rotation_z(ticks_nb));  // TODO implement the * operator for Mat4
+				// gl::UniformMatrix4fv(
+                //     transform_loc,
+                //     1,
+                //     gl::FALSE,
+                //     // transform.to_cols_array().as_ptr(),
+                //     transform.to_cols_array().as_ptr(),
+                // );
+				gl::UniformMatrix4fv(
+					model_loc,
+					1,
+					gl::FALSE,
+					model.to_cols_array().as_ptr(),
+				);
+
                 let time_loc = gl::GetUniformLocation(shader_program.0, "time\0".as_ptr().cast());
                 gl::Uniform1f(
                     time_loc,
@@ -286,10 +304,12 @@ fn main() {
                 );
                 // ticks_nb += 1.0;
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
+				gl::ActiveTexture(gl::TEXTURE0);
             }
         }
         // println!("Ticks true: {}", window.sdl.timer().unwrap().ticks());
         // println!("Ticks: {}", ticks_nb);
+		
         window.window.gl_swap_window();
     }
     shader_program.delete();

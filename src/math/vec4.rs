@@ -1,5 +1,7 @@
 // use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
+use crate::Vec3;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec4 {
     pub x: f32,
@@ -43,16 +45,16 @@ impl Vec4 {
     /// The unit axes.
     pub const AXES: [Self; 4] = [Self::X, Self::Y, Self::Z, Self::W];
 
-	pub fn from_translation(vec3: Vec3) -> Self {
-		Self {
-			x: vec3.x,
-			y: vec3.y,
-			z: vec3.z,
-			w: 1.0,
-		}
-	}
+    pub fn from_translation(vec3: Vec3) -> Self {
+        Self {
+            x: vec3.x,
+            y: vec3.y,
+            z: vec3.z,
+            w: 1.0,
+        }
+    }
 
-#[inline]
+    #[inline]
     pub fn from_array(arr: &[f32; 4]) -> Self {
         Self {
             x: arr[0],

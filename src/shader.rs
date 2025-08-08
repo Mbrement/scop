@@ -17,37 +17,37 @@ pub const VERT_SHADER_UNIFORM: &str = r#"#version 460 core
 //   }
 // "#;
 
-// texture variante
-
-// pub const VERT_SHADER: &str = r#"#version 460 core
-//   uniform mat4 model;
-//   uniform mat4 view;
-//   uniform mat4 projection;
-
-//   layout (location = 0) in vec3 pos;
-//   layout (location = 1) in vec2 tex;
-
-//   out vec2 frag_tex;
-
-//   void main() {
-//     gl_Position = projection * view * model * vec4(pos, 1.0);
-//     frag_tex = tex;
-//   }
-// "#;
-
+// rotation variant
 pub const VERT_SHADER: &str = r#"#version 460 core
-  uniform mat4 transform;
-  
+  uniform mat4 model;
+  uniform mat4 view;
+  uniform mat4 projection;
+
   layout (location = 0) in vec3 pos;
   layout (location = 1) in vec2 tex;
 
   out vec2 frag_tex;
 
   void main() {
-    gl_Position = transform * vec4(pos, 1.0);
+    gl_Position = projection * view * model * vec4(pos, 1.0);
     frag_tex = tex;
   }
 "#;
+
+// texture variante
+// pub const VERT_SHADER: &str = r#"#version 460 core
+//   uniform mat4 transform;
+  
+//   layout (location = 0) in vec3 pos;
+//   layout (location = 1) in vec2 tex;
+
+//   out vec2 frag_tex;
+
+//   void main() {
+//     gl_Position = transform * vec4(pos, 1.0);
+//     frag_tex = tex;
+//   }
+// "#;
 
 // OLD
 // pub const FRAG_SHADER: &str = r#"#version 460 core
