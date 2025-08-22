@@ -5,7 +5,7 @@ mod config;
 mod helper;
 mod shader;
 
-use chrono::*;
+// use chrono::*;
 use core::{
     convert::{TryFrom, TryInto},
     f32,
@@ -18,7 +18,7 @@ use imagine::{png, Bitmap};
 type Vertex = [f32; 3 + 2]; // pos (3)+ tex (2)
 type TriIndexes = [u32; 3];
 
-use math;
+use math::{self, Mat4};
 
 // use glam::{Mat4, Vec3, Vec4};
 
@@ -54,7 +54,7 @@ fn main() {
         bitmap
     }; //TODO : load the texture without external lib HALP
 
-    let start = chrono::DateTime::timestamp_millis(&self::Utc::now());
+    // let start = chrono::DateTime::timestamp_millis(&self::Utc::now());
     let mut running_engine = 0; // flag to control shader program usage
     let mut window = winsdl::WindowSDL::new(
         config::WindowConfig::NAME,
@@ -175,24 +175,21 @@ fn main() {
         let name = "projection\0".as_ptr().cast();
         gl::GetUniformLocation(shader_program.0, name)
     };
-	
+
     let view = math::Mat4::from_translation(math::Vec3::from_array(&[0.0, 0.0, -1.0]));
     unsafe { gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, view.to_cols_array().as_ptr()) };
-	
-    let projection = ultraviolet::projection::perspective_gl(
-		45.0_f32.to_radians(),
+
+    let projection = Mat4::create_perspective_gl(
+        45.0_f32.to_radians(),
         (config::WindowConfig::WIDTH as f32) / (config::WindowConfig::HEIGHT as f32),
         0.1,
         100.0,
     );
-	unsafe { gl::UniformMatrix4fv(projection_loc, 1, gl::FALSE, projection.as_ptr()) };
+    unsafe { gl::UniformMatrix4fv(projection_loc, 1, gl::FALSE, projection.as_ptr()) };
 
-	unsafe {
-		gl::UniformMatrix4fv(projection_loc, 1, gl::FALSE, projection.as_ptr());
-	}
-
-
-
+    unsafe {
+        gl::UniformMatrix4fv(projection_loc, 1, gl::FALSE, projection.as_ptr());
+    }
 
     'running: loop {
         for event in window.event_pump.poll_iter() {
@@ -272,8 +269,7 @@ fn main() {
             if running_engine % 2 == 1 {
                 gl::Uniform4f(uni_color_loc, 0.1, color_sin_value, 0.1, 1.0);
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
-            } 
-			else {
+            } else {
                 let transform = math::Mat4::from_rotation_z(ticks_nb);
                 shader_program.use_program();
                 let transform_name = "transform\0".as_ptr().cast();
@@ -282,20 +278,18 @@ fn main() {
                 //     // println!("\x1b[93mFailed to get uniform location for 'transform'\x1b[0m");
                 //     // --> actually happen, but why
                 // }
-				let model =  math::Mat4::mul_mat4(math::Mat4::from_rotation_x(1.3), math::Mat4::from_rotation_z(ticks_nb));  // TODO implement the * operator for Mat4
-				// gl::UniformMatrix4fv(
-                //     transform_loc,
-                //     1,
-                //     gl::FALSE,
-                //     // transform.to_cols_array().as_ptr(),
-                //     transform.to_cols_array().as_ptr(),
-                // );
-				gl::UniformMatrix4fv(
-					model_loc,
-					1,
-					gl::FALSE,
-					model.to_cols_array().as_ptr(),
-				);
+                let model = math::Mat4::mul_mat4(
+                    math::Mat4::from_rotation_x(1.3),
+                    math::Mat4::from_rotation_z(ticks_nb),
+                ); // TODO implement the * operator for Mat4
+                   // gl::UniformMatrix4fv(
+                   //     transform_loc,
+                   //     1,
+                   //     gl::FALSE,
+                   //     // transform.to_cols_array().as_ptr(),
+                   //     transform.to_cols_array().as_ptr(),
+                   // );
+                gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, model.to_cols_array().as_ptr());
 
                 let time_loc = gl::GetUniformLocation(shader_program.0, "time\0".as_ptr().cast());
                 gl::Uniform1f(
@@ -304,19 +298,19 @@ fn main() {
                 );
                 // ticks_nb += 1.0;
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
-				gl::ActiveTexture(gl::TEXTURE0);
+                gl::ActiveTexture(gl::TEXTURE0);
             }
         }
         // println!("Ticks true: {}", window.sdl.timer().unwrap().ticks());
         // println!("Ticks: {}", ticks_nb);
-		
+
         window.window.gl_swap_window();
     }
     shader_program.delete();
     shader_program_uniform.delete();
     // Print the time taken to run the program
-    println!(
-        "\x1b[92mExiting normaly after {} ms\x1b[0m",
-        chrono::DateTime::timestamp_millis(&self::Utc::now()) - start
-    );
+    // println!(
+    //     "\x1b[92mExiting normaly after {} ms\x1b[0m",
+    //     chrono::DateTime::timestamp_millis(&self::Utc::now()) - start
+    // );
 }

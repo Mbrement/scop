@@ -1,9 +1,9 @@
 use crate::Vec3;
 
-pub struct Mat3{
-	pub x_axis: Vec3,
-	pub y_axis: Vec3,
-	pub z_axis: Vec3
+pub struct Mat3 {
+    pub x_axis: Vec3,
+    pub y_axis: Vec3,
+    pub z_axis: Vec3,
 }
 
 // impl Mat3 {

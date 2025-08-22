@@ -37,7 +37,7 @@ pub const VERT_SHADER: &str = r#"#version 460 core
 // texture variante
 // pub const VERT_SHADER: &str = r#"#version 460 core
 //   uniform mat4 transform;
-  
+
 //   layout (location = 0) in vec3 pos;
 //   layout (location = 1) in vec2 tex;
 
